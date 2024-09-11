@@ -1,16 +1,18 @@
-const fastify = require('fastify')({
-    logger: false
-});
+const express = require('express');
 const logger = require('./logging');
 
 const tracksRouter = require('../routes/tracks_route');
 
-function registerRoutes(fastify) {
+function registerRoutes(app) {
     try {
-        fastify.register(tracksRouter);
+        const router = express.Router();
+
+        router.use('/tracks', tracksRouter);
+
+        app.use('/api', router);
         logger.info('Routes registered');
     } catch (error) {
-        logger.error(error);
+        logger.error('Error registering routes:', error);
     }
 }
 
