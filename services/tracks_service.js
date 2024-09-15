@@ -1,20 +1,24 @@
 const MinioService = require('./minio_service');
 const path = require('path');
+const fs = require("fs");
+const {transcodeUsingFFmpeg} = require("../utils/audio_utils");
+const CustomError = require("../utils/custom_error");
 
 class TracksService {
     constructor() {
         this.minioService = new MinioService();
     }
 
-    async getPresignedUrlForTrack(objectName, expiryTimeInMinutes) {
-        return this.minioService.getPresignedUrl(objectName, expiryTimeInMinutes);
-    }
+    async streamTrack() {
+        const musicPath = path.join(__dirname, '../temp/1-もし、空が晴れるなら.flac');
 
-    async getRawAudio(objectName) {
-        return this.minioService.getRawAudio(objectName);
-    }
+        if (!fs.existsSync(musicPath)) {
+            throw new CustomError(404, 'Audio file not found');
+        }
 
-    async prepareTrackStream(start, end) {
+        const {buffer, fileSize} = await transcodeUsingFFmpeg(musicPath, '192');
+
+        return {buffer, fileSize};
     }
 }
 

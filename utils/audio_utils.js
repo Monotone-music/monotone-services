@@ -1,25 +1,56 @@
-const ffmpeg = require('fluent-ffmpeg');
 const logger = require('../init/logging');
+const {spawn} = require("child_process");
+
 
 /**
- * Get the duration of an audio file using ffprobe.
- * @param {string} filePath - The path to the audio file.
- * @returns {Promise<number>} - The duration of the file in seconds.
+ * transcode audio file to mp3 format at specified bitrate
+ * @param audioPath - path to audio file
+ * @param bitRate - bitrate for transcoding
+ * @returns {Promise<unknown>}
  */
-function getFileDuration(filePath) {
+function transcodeUsingFFmpeg(audioPath, bitRate = '192') {
     return new Promise((resolve, reject) => {
-        ffmpeg.ffprobe(filePath, (err, metadata) => {
-            if (err) {
-                logger.error(`Error getting duration of file ${filePath}: ${err.message}`);
-                reject(err);
+        const ffmpegArgs = [
+            '-i', audioPath,
+            '-f', 'mp3',
+            '-ar', '44100',
+            '-ac', 2,
+            '-b:a', bitRate.toString() + 'k',
+            'pipe:1'  // Output to stdout
+        ];
+
+        const ffmpegProcess = spawn('ffmpeg', ffmpegArgs);
+
+        const chunks = [];
+        let fileSize = 0;
+
+        ffmpegProcess.stdout.on('data', (chunk) => {
+            chunks.push(chunk);
+            fileSize += chunk.length;
+        });
+
+        ffmpegProcess.stderr.on('data', (data) => {
+            const log = data.toString();
+            const sizeMatch = log.match(/size=\s*(\d+)KiB/);
+            let transcodedSize;
+            if (sizeMatch) {
+                transcodedSize = parseInt(sizeMatch[1]) * 1024;  // Convert KiB to bytes
+                logger.info(`Transcoded size: ${transcodedSize} bytes at ${bitRate}kbps`);
+            }
+        });
+
+        ffmpegProcess.on('close', (code) => {
+            if (code !== 0) {
+                logger.error(`FFmpeg process exited with code ${code}`);
+                reject(new Error(`FFmpeg process exited with code ${code}`));
             } else {
-                logger.info(`Duration of file ${filePath}: ${metadata.format.duration}`);
-                resolve(metadata.format.duration);
+                const buffer = Buffer.concat(chunks);
+                resolve({buffer, fileSize});
             }
         });
     });
 }
 
 module.exports = {
-    getFileDuration
+    transcodeUsingFFmpeg
 };

@@ -6,28 +6,17 @@ class MinioService {
         this.bucketName = process.env.MINIO_BUCKET;
     }
 
-    async getPresignedUrl(objectName, expiryTimeInMinutes = 60) {
+    /**
+     * Get an object from Minio
+     * @param {string} objectName - The name of the object to get
+     * @returns {Promise<stream.Readable>} - The object stream
+     */
+    getObject(objectName) {
         try {
-            const presignedUrl = await minioClient.presignedGetObject(
-                this.bucketName,
-                objectName,
-                expiryTimeInMinutes * 60); //convert minutes to seconds
-            logger.info('Presigned URL generated successfully');
-            return presignedUrl;
-        } catch (err) {
-            logger.error('Error generating presigned URL:', err);
-            throw err;
-        }
-    }
-
-    async getRawAudio(objectName) {
-        try {
-            const stream = await minioClient.getObject(this.bucketName, objectName);
-            logger.info(`Streaming audio for object: ${objectName}`);
-            return stream;
-        } catch (err) {
-            logger.error('Error streaming audio:', err);
-            throw err;
+            return minioClient.getObject(this.bucketName, objectName);
+        } catch (error) {
+            logger.error(`Error getting object from Minio: ${error.message}`);
+            throw error;
         }
     }
 }
