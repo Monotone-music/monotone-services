@@ -9,7 +9,7 @@ function registerRoutes(app) {
 
         router.use('/tracks', tracksRouter);
 
-        app.use('/api', router);
+        app.use('', router);
         logger.info('Routes registered');
     } catch (error) {
         logger.error('Error registering routes:', error);

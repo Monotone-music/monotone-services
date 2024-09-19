@@ -8,16 +8,38 @@ class MinioService {
 
     /**
      * Get an object from Minio
-     * @param {string} objectName - The name of the object to get
-     * @returns {Promise<stream.Readable>} - The object stream
+     * @returns {Promise<unknown>}
+     * @param bucketName
+     * @param prefix
      */
-    getObject(objectName) {
-        try {
-            return minioClient.getObject(this.bucketName, objectName);
-        } catch (error) {
-            logger.error(`Error getting object from Minio: ${error.message}`);
-            throw error;
-        }
+    async listObjects(bucketName, prefix) {
+        return new Promise((resolve, reject) => {
+            const objects = [];
+            const stream = minioClient.listObjects(bucketName, prefix, true);
+            stream.on('data', (obj) => {
+                objects.push(obj);
+            });
+            stream.on('error', (err) => {
+                logger.error(`Error listing objects: ${err}`);
+                reject(err);
+            });
+            stream.on('end', () => {
+                resolve(objects);
+            });
+        });
+    }
+
+    async uploadObject(bucketName, objectName, filePath, metadata) {
+        return new Promise((resolve, reject) => {
+            minioClient.fPutObject(bucketName, objectName, filePath, metadata, function (err, etag) {
+                if (err) {
+                    logger.error(`Error uploading object: ${err}`);
+                    reject(err);
+                } else {
+                    resolve(etag);
+                }
+            });
+        });
     }
 }
 

@@ -3,12 +3,17 @@ const path = require('path');
 const fs = require("fs");
 const {transcodeUsingFFmpeg} = require("../utils/audio_utils");
 const CustomError = require("../utils/custom_error");
+const logger = require('../init/logging');
 
 class TracksService {
     constructor() {
         this.minioService = new MinioService();
     }
 
+    /**
+     * Stream a track
+     * @returns {Promise<{buffer: Buffer, fileSize: number}>} - The buffer and file size
+     */
     async streamTrack() {
         const musicPath = path.join(__dirname, '../temp/1-もし、空が晴れるなら.flac');
 
@@ -19,6 +24,15 @@ class TracksService {
         const {buffer, fileSize} = await transcodeUsingFFmpeg(musicPath, '192');
 
         return {buffer, fileSize};
+    }
+
+    async uploadTrack() {
+    }
+
+    async submitTrack() {
+    }
+
+    async queryTrackMetadata() {
     }
 }
 
