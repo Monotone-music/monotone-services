@@ -1,4 +1,5 @@
 const minioClient = require('../init/obj_storage_init');
+const path = require('path');
 const logger = require('../init/logging');
 
 class MinioService {
@@ -29,17 +30,43 @@ class MinioService {
         });
     }
 
+    /**
+     * Get an object from Minio
+     * @returns {Promise<unknown>}
+     * @param trackName
+     * @param album
+     * @param quality - '192', '320', defaults 'raw'
+     */
+
+    async getObject(trackName, album, quality = 'raw') {
+        const qualityPath = quality === '192' ? '192kbps'
+            : quality === '320' ? '320kbps'
+                : 'raw';
+
+        let fileExtension;
+
+        switch (qualityPath) {
+            case '192kbps':
+                fileExtension = '.mp3';
+                break;
+            case '320kbps':
+                fileExtension = '.mp3';
+                break;
+            default:
+                fileExtension = '.flac';
+        }
+
+
+        const objectPath = path.join(qualityPath, album, `${trackName}${fileExtension}`);
+
+        logger.info(`Retrieving object: ${objectPath}`);
+        const objectStream = minioClient.getObject(this.bucketName, objectPath);
+
+        return objectStream;
+    }
+
     async uploadObject(bucketName, objectName, filePath, metadata) {
-        return new Promise((resolve, reject) => {
-            minioClient.fPutObject(bucketName, objectName, filePath, metadata, function (err, etag) {
-                if (err) {
-                    logger.error(`Error uploading object: ${err}`);
-                    reject(err);
-                } else {
-                    resolve(etag);
-                }
-            });
-        });
+
     }
 }
 
