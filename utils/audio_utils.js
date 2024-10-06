@@ -51,6 +51,19 @@ function transcodeUsingFFmpeg(audioPath, bitRate = '192') {
     });
 }
 
+function filterReleasesByType(releases) {
+    return releases.filter(release => {
+        const releaseGroup = release['release-group'];
+
+        // Check if primary-type is "Album" and secondary-types array is empty or undefined
+        const isAlbum = releaseGroup?.['primary-type'] === 'Album' || 'Single';
+        const hasNoSecondaryType = !releaseGroup?.['secondary-types'] || releaseGroup['secondary-types'].length === 0;
+
+        return isAlbum && hasNoSecondaryType;
+    });
+}
+
 module.exports = {
-    transcodeUsingFFmpeg
+    transcodeUsingFFmpeg,
+    filterReleasesByType
 };

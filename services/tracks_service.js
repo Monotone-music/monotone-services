@@ -5,9 +5,7 @@ const AcoustIDService = require('./acoustid_service');
 const path = require('path');
 const fs = require("fs");
 const {exec} = require("child_process");
-const https = require('https');
-const zlib = require('zlib');
-const {transcodeUsingFFmpeg} = require("../utils/audio_utils");
+const {transcodeUsingFFmpeg, filterReleasesByType} = require("../utils/audio_utils");
 const CustomError = require("../utils/custom_error");
 const logger = require('../init/logging');
 
@@ -48,18 +46,13 @@ class TracksService {
 
     /**
      * Query AcoustID for track metadata
-     * @param duration
-     * @param fingerprint
      * @returns {Promise<any>}
      */
     async queryTrackMetadata() {
         try {
-            // const recording = await this.musicbrainzService.getRecordingMetadata('646b40c2-1a40-4d36-88a6-6c137d8a719f')
-            // console.log(recording);
-            //771d0dfd-6c91-4d5b-95a6-1c2c80010af9
-
-            const acoust = await this.acoustidService.queryTrackMetadataWithAcoustid();
-            console.log(acoust.results[0].recordings[0].releasegroups[0].releases[0]);
+            const recording_acoustid = await this.acoustidService.queryTrackMetadataWithAcoustid('chooseme.mp3').then((data) => {
+                return data.results[0].recordings[0].id
+            });
             // acoust.results[0].recordings[0].artists[] = artists
             // acoust.results[0].recordings[0].title = title
             // acoust.results[0].recordings[0].duration = duration
@@ -68,9 +61,13 @@ class TracksService {
             // acoust.results[0].recordings[0].releasegroups[0].releases[0].media[0] = release media information
             // **note that media[0].position is the disc number and media[0].tracks[0].position is the track number
 
-            return acoust;
+            const recording = await this.musicbrainzService.getRecordingMetadata(recording_acoustid);
+            const filtered_rec = filterReleasesByType(recording.releases);
+            console.log(filtered_rec);
+
+            return recording;
         } catch (error) {
-            console.error('Error:', error);
+            console.error('Error: ', error);
         }
     }
 

@@ -3,6 +3,7 @@ const zlib = require("zlib");
 const {exec} = require("node:child_process");
 const path = require("node:path");
 const {normalizePath} = require("../utils/utils");
+const data = require("./sample_data");
 
 class AcoustidService {
     constructor() {
@@ -12,16 +13,15 @@ class AcoustidService {
 
     /**
      * Query AcoustID for track metadata
-     * @param duration
-     * @param fingerprint
+     * @param filename - name of the audio file
      * @returns {Promise<any>}
      */
-    async queryTrackMetadataWithAcoustid() {
-        const {duration, fingerprint} = await this.getTrackAcousticFingerprint();
+    async queryTrackMetadataWithAcoustid(filename) {
+        const {duration, fingerprint} = await this.getTrackAcousticFingerprint(filename)
 
         const client = this.acoustIDAPIKey;
         const roundedDuration = Math.round(duration);
-        const meta = 'recordings+releases+releasegroups+tracks+releasegroupids+compress';
+        const meta = 'recordings';
         const url = `${this.baseUrl}lookup?client=${client}&duration=${roundedDuration}&fingerprint=${fingerprint}&meta=${meta}`;
 
         const options = {
@@ -39,8 +39,8 @@ class AcoustidService {
      * Generate a track's acoustic fingerprint
      * @returns {Promise<{fingerprint: string, duration: number}>}
      */
-    async getTrackAcousticFingerprint() {
-        const result = await generateFingerprint();
+    async getTrackAcousticFingerprint(filename) {
+        const result = await generateFingerprint(filename);
         return {
             fingerprint: result.fingerprint,
             duration: result.duration
@@ -52,9 +52,9 @@ class AcoustidService {
  * Generate a fingerprint for a track
  * @returns {Promise<{fingerprint: string, duration: number}>}
  */
-function generateFingerprint() {
+function generateFingerprint(filename) {
     return new Promise((resolve, reject) => {
-        exec(`fpcalc -json ${path.join(__dirname, normalizePath('../temp/gasoline.flac'))}`, (error, stdout) => {
+        exec(`fpcalc -json ${path.join(__dirname, normalizePath(`../temp/${filename}`))}`, (error, stdout) => {
             if (error) {
                 return reject('Error generating fingerprint: ' + error);
             }

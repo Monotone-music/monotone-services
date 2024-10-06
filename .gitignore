@@ -131,4 +131,5 @@ dist
 .vscode
 .dev.env
 .prod.env
-
+./temp
+./temp/*
