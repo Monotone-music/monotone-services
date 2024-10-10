@@ -50,21 +50,24 @@ class TracksService {
    */
   async queryTrackMetadata() {
     try {
-      const recording_acoustid = await this.acoustidService.queryTrackMetadataWithAcoustid('karma.flac').then((data) => {
+      const recording_acoustid = await this.acoustidService.queryTrackMetadataWithAcoustid('blindinglights.flac').then((data) => {
         if (data.results[0].recordings[0].id === undefined) {
           return {
-            flag: 1,
+            flag: "query_mb",
             meta: {
-              releases: [{
-                artists: data.results[0].recordings[0].releases[0].mediums[0].tracks[0].artists[0],
-                title: data.results[0].recordings[0].releases[0].mediums[0].tracks[0].title,
-                position: data.results[0].recordings[0].releases[0].mediums[0].tracks[0].position,
-              }]
+              artists: [data.results[0].recordings[0].artists[0]],
+              title: data.results[0].recordings[0].title,
             }
-          }
+          };
         }
-        // console.log(data.results[0]) // user submitted meta
-        return data
+
+        delete data.results[0].recordings[0].artists;
+        delete data.results[0].recordings[0].title;
+        delete data.results[0].recordings[0].sources;
+        return {
+          flag: "data_present",
+          meta: data.results[0]
+        }
       });
       // acoust.results[0].recordings[0].artists[] = artists
       // acoust.results[0].recordings[0].title = title
@@ -74,8 +77,10 @@ class TracksService {
       // acoust.results[0].recordings[0].releasegroups[0].releases[0].media[0] = release media information
       // **note that media[0].position is the disc number and media[0].tracks[0].position is the track number
 
-      // const recording = await this.musicbrainzService.getRecordingMetadata(recording_acoustid);
-      // const filtered_rec = filterReleasesByType(recording.releases);
+      console.log(recording_acoustid.meta.recordings[0])
+      delete recording_acoustid.meta.recordings[0]
+
+      const filtered_rec = filterReleasesByType(recording_acoustid.meta.recordings);
       // console.log(filtered_rec);
 
       return recording_acoustid;

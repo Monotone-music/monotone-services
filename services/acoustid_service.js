@@ -21,7 +21,7 @@ class AcoustidService {
 
         const client = this.acoustIDAPIKey;
         const roundedDuration = Math.round(duration);
-        const meta = 'recordings+usermeta+releases+tracks+sources';
+        const meta = 'recordings+usermeta+sources+releasegroups+releases';
         const url = `${this.baseUrl}lookup?client=${client}&duration=${roundedDuration}&fingerprint=${fingerprint}&meta=${meta}`;
 
         const options = {
