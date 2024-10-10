@@ -21,7 +21,7 @@ class AcoustidService {
 
         const client = this.acoustIDAPIKey;
         const roundedDuration = Math.round(duration);
-        const meta = 'recordings';
+        const meta = 'recordings+usermeta+sources+releasegroups+releases';
         const url = `${this.baseUrl}lookup?client=${client}&duration=${roundedDuration}&fingerprint=${fingerprint}&meta=${meta}`;
 
         const options = {
@@ -54,7 +54,8 @@ class AcoustidService {
  */
 function generateFingerprint(filename) {
     return new Promise((resolve, reject) => {
-        exec(`fpcalc -json ${path.join(__dirname, normalizePath(`../temp/${filename}`))}`, (error, stdout) => {
+        const fullPath = `"${path.join(__dirname, `../temp/${filename}`)}"`
+        exec(`fpcalc -json ${fullPath}`, (error, stdout) => {
             if (error) {
                 return reject('Error generating fingerprint: ' + error);
             }
