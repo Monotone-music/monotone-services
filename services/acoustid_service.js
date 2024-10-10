@@ -55,7 +55,8 @@ class AcoustidService {
 function generateFingerprint(filename) {
     return new Promise((resolve, reject) => {
         const fullPath = `"${path.join(__dirname, `../temp/${filename}`)}"`
-        exec(`fpcalc -json ${fullPath}`, (error, stdout) => {
+
+        exec(`fpcalc -json ${path.normalize(fullPath)}`, (error, stdout) => {
             if (error) {
                 return reject('Error generating fingerprint: ' + error);
             }
