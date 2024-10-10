@@ -65,8 +65,28 @@ class MinioService {
         return objectStream;
     }
 
-    async uploadObject(bucketName, objectName, filePath, metadata) {
-
+    /**
+     * Upload an object to Minio
+     * @param buffer - buffer of the file
+     * @param fileName - name of the file
+     * @param mimeType - default 'audio/mpeg'
+     * @param bucketName - default '
+     * @returns {Promise<unknown>}
+     */
+    async uploadObject(buffer, fileName, mimeType = 'audio/flac', bucketName = 'monotone') {
+        return new Promise((resolve, reject) => {
+            minioClient.putObject(
+                bucketName,
+                fileName,
+                buffer,
+                buffer.length,
+                {'Content-Type': mimeType}
+            ).catch((error) => {
+                logger.error(`Error uploading object: ${error}`);
+                reject(error);
+            });
+            resolve();
+        });
     }
 }
 

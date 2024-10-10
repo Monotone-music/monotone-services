@@ -5,7 +5,7 @@ const AcoustIDService = require('./acoustid_service');
 const path = require('path');
 const fs = require("fs");
 const {exec} = require("child_process");
-const {transcodeUsingFFmpeg, filterReleasesByType} = require("../utils/audio_utils");
+const {transcodePath, filterReleasesByType, filterDuplicateReleases} = require("../utils/audio_utils");
 const CustomError = require("../utils/custom_error");
 const logger = require('../init/logging');
 
@@ -28,13 +28,14 @@ class TracksService {
       throw new CustomError(404, 'Audio file not found');
     }
 
-    const {buffer, fileSize} = await transcodeUsingFFmpeg(musicPath, '192');
+        const {buffer, fileSize} = await transcodePath(musicPath, '192');
 
     return {buffer, fileSize};
   }
 
-  async uploadTrack() {
-  }
+    async uploadTrack(tracks) {
+
+    }
 
   async applyMetadataToTrack() {
 
@@ -44,50 +45,59 @@ class TracksService {
     return await this.minioService.getObject('2-faraway-country', 'Cafe de Touhou 1', 'a');
   }
 
-  /**
-   * Query AcoustID for track metadata
-   * @returns {Promise<any>}
-   */
-  async queryTrackMetadata() {
-    try {
-      const recording_acoustid = await this.acoustidService.queryTrackMetadataWithAcoustid('blindinglights.flac').then((data) => {
-        if (data.results[0].recordings[0].id === undefined) {
-          return {
-            flag: "query_mb",
-            meta: {
-              artists: [data.results[0].recordings[0].artists[0]],
-              title: data.results[0].recordings[0].title,
+    /**
+     * Query AcoustID for track metadata
+     * @returns {Promise<any>}
+     */
+
+    // acoust.results[0].recordings[0].artists[] = artists
+    // acoust.results[0].recordings[0].title = title
+    // acoust.results[0].recordings[0].duration = duration
+    // acoust.results[0].recordings[0].releasegroups[0].releases[0].title = album name
+    // acoust.results[0].recordings[0].releasegroups[0].releases[0].date = release date
+    // acoust.results[0].recordings[0].releasegroups[0].releases[0].media[0] = release media information
+    // **note that media[0].position is the disc number and media[0].tracks[0].position is the track number
+
+    async queryTrackMetadata() {
+        try {
+            const acoustidResults = await this.acoustidService.queryTrackMetadataWithAcoustid('thewayweare.mp3');
+
+            if (!acoustidResults.results || acoustidResults.results.length === 0) {
+                console.error('No results found in AcoustID.');
+                return [];
             }
-          };
+
+            const acoustIdRecordings = acoustidResults.results[0].recordings;
+            const numberOfResults = 10;
+
+            const recordingIds = acoustIdRecordings
+                .filter(recording => recording.id) // Keep only recordings with an id
+                .slice(0, numberOfResults) // Limit to the specified number of results (5)
+                .map(recording => recording.id); // Extract the IDs
+
+            const recordingMetadataPromises = recordingIds.map(async (recordingId) => {
+                try {
+                    const recordingMetadata = await this.musicbrainzService.getRecordingMetadata(recordingId);
+
+                    if (recordingMetadata.error) {
+                        console.warn(`Recording ID ${recordingId} not found: ${recordingMetadata.error}`);
+                        return null;
+                    }
+
+                    const filtered = filterReleasesByType(recordingMetadata.releases);
+                    return filtered.length > 0 ? filtered[0] : null;
+                } catch (error) {
+                    console.error(`Error fetching metadata for recording ID ${recordingId}:`, error);
+                    return null;
+                }
+            });
+
+            const recordingsMetadata = await Promise.all(recordingMetadataPromises);
+            return filterDuplicateReleases(recordingsMetadata.filter(result => result !== null));
+        } catch (error) {
+            console.error('Error: ', error);
         }
-
-        delete data.results[0].recordings[0].artists;
-        delete data.results[0].recordings[0].title;
-        delete data.results[0].recordings[0].sources;
-        return {
-          flag: "data_present",
-          meta: data.results[0]
-        }
-      });
-      // acoust.results[0].recordings[0].artists[] = artists
-      // acoust.results[0].recordings[0].title = title
-      // acoust.results[0].recordings[0].duration = duration
-      // acoust.results[0].recordings[0].releasegroups[0].releases[0].title = album name
-      // acoust.results[0].recordings[0].releasegroups[0].releases[0].date = release date
-      // acoust.results[0].recordings[0].releasegroups[0].releases[0].media[0] = release media information
-      // **note that media[0].position is the disc number and media[0].tracks[0].position is the track number
-
-      console.log(recording_acoustid.meta.recordings[0])
-      delete recording_acoustid.meta.recordings[0]
-
-      const filtered_rec = filterReleasesByType(recording_acoustid.meta.recordings);
-      // console.log(filtered_rec);
-
-      return recording_acoustid;
-    } catch (error) {
-      console.error('Error: ', error);
     }
-  }
 
   /**
    * Generate a track's acoustic fingerprint
