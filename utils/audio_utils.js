@@ -100,9 +100,9 @@ function transcodeStream(audioBuffer, bitRate = '192') {
     });
 }
 
-function filterReleasesByType(releases) {
-    const albumReleases = releases.filter(release => {
-        const releaseGroup = release['release-group'];
+function filterReleasesByType(releasegroups) {
+    const albumReleases = releasegroups.filter(releasegroup => {
+        const releaseGroup = releasegroup['release-group'];
         return releaseGroup?.['primary-type'] === 'Album' && (!releaseGroup['secondary-types'] || releaseGroup['secondary-types'].length === 0);
     });
 
