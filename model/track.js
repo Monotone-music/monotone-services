@@ -2,10 +2,12 @@ const mongoose = require('mongoose');
 const option = require('./option');
 
 const trackSchema = new mongoose.Schema({
-    title: {type: String, required: true},
-    duration: {type: Number},
-    artist: {type: mongoose.Schema.Types.ObjectId, ref: 'artist'},
-    genre: [{type: String}],
+  artists: {
+    name: {type: String},
+    metadata: {type: mongoose.Schema.Types.ObjectId, ref: 'metadata'},
+  },
+  metadata: {type: mongoose.Schema.Types.ObjectId, ref: 'metadata'},
+  position: {type: Number},
 }, option);
 
 module.exports = mongoose.model('track', trackSchema);

@@ -60,7 +60,7 @@ class TracksService {
 
   async queryTrackMetadata() {
     try {
-      const acoustidResults = await this.acoustidService.queryTrackMetadataWithAcoustid('chooseme.mp3').then(data => {
+      const acoustidResults = await this.acoustidService.queryTrackMetadataWithAcoustid('solarprominence.flac').then(data => {
         if (!data.results || data.results.length === 0) {
           console.error('No results found in AcoustID.');
           return [];
@@ -97,6 +97,11 @@ class TracksService {
       console.error('Error: ', error);
     }
   }
+
+  async uploadTrackToStorage(){
+
+  }
+
 
   /**
    * Generate a track's acoustic fingerprint

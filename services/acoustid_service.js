@@ -2,7 +2,6 @@ const https = require("https");
 const zlib = require("zlib");
 const {exec} = require("node:child_process");
 const path = require("node:path");
-const {normalizePath} = require("../utils/utils");
 const data = require("./sample_data");
 
 class AcoustidService {
