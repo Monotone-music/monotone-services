@@ -69,9 +69,8 @@ class TracksController {
 
   putTrack = asyncHandler(async (req, res) => {
     const file = req.file;
-    console.log('File:', file);
-    // const result = await this.trackService.uploadTrackToStorage();
-    res.status(200).json({status: 'ok', message: 'Track uploaded', data: file});
+    const result = await this.trackService.putTrack(file.buffer, file.mimetype);
+    res.status(200).json({status: 'ok', message: 'Track uploaded', data: 'lol'});
   });
 
   putTracks = asyncHandler(async (req, res) => {
