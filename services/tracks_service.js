@@ -16,7 +16,6 @@ class TracksService {
     this.minioService = new MinioService();
     this.musicbrainzService = new MusicbrainzService();
     this.acoustidService = new AcoustIDService();
-    this.acoustIDAPIKey = process.env.ACOUSTID_API_KEY;
   }
 
   /**
