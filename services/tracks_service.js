@@ -7,6 +7,8 @@ const fs = require("fs");
 const {exec} = require("child_process");
 const {transcodePath, filterReleasesByType, filterDuplicateReleases} = require("../utils/audio_utils");
 const CustomError = require("../utils/custom_error");
+const mm = require('music-metadata');
+const util = require('util');
 const logger = require('../init/logging');
 
 class TracksService {
@@ -33,8 +35,15 @@ class TracksService {
     return {buffer, fileSize};
   }
 
-  async uploadTrack(tracks) {
-
+  async putTrack(track) {
+    await (async () => {
+      try {
+        const metadata = await mm.parseFile('./temp/blindinglights.flac');
+        console.log(util.inspect(metadata, { showHidden: false, depth: null }));
+      } catch (error) {
+        console.error(error.message);
+      }
+    })();
   }
 
   async applyMetadataToTrack() {
@@ -98,7 +107,7 @@ class TracksService {
     }
   }
 
-  async uploadTrackToStorage(){
+  async uploadTrackToStorage() {
 
   }
 
