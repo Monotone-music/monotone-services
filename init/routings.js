@@ -1,21 +1,22 @@
 const express = require('express');
 const logger = require('./logging');
 
-const tracksRouter = require('../routes/tracks_route')
-const recordingRouter = require('../routes/recording_route')
-
 function registerRoutes(app) {
-    try {
-        const router = express.Router();
+  try {
+    const router = express.Router();
 
-        router.use('/tracks', tracksRouter);
-        router.use('/recording', recordingRouter);
+    router.use('/tracks', require('../routes/tracks_route'));
+    router.use('/recording', require('../routes/recording_route'));
+    router.use('/album', require('../routes/album_route'));
+    router.use('/image', require('../routes/image_route'));
+    router.use('/artist', require('../routes/artist_route'));
+    router.use('/search', require('../routes/search_route'));
 
-        app.use('', router);
-        logger.info('Routes registered');
-    } catch (error) {
-        logger.error('Error registering routes:', error);
-    }
+    app.use('', router);
+    logger.info('Routes registered');
+  } catch (error) {
+    logger.error('Error registering routes:', error);
+  }
 }
 
 module.exports = registerRoutes;

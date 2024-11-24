@@ -46,7 +46,7 @@ app.use((req, res, next) => {
   res.status(500).send('Something broke!');
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
 async function startServer() {
   try {

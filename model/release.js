@@ -2,24 +2,12 @@ const mongoose = require('mongoose');
 const option = require('./option');
 
 const releaseSchema = new mongoose.Schema({
-  country: {type: String},
-  date: {
-    day: {type: Number},
-    month: {type: Number},
-    year: {type: Number}
-  },
-  metadata: {type: mongoose.Schema.Types.ObjectId, ref: 'metadata'},
-  medium_count: {type: Number},
-  medium: {type: mongoose.Schema.Types.ObjectId, ref: 'medium'},
-  releaseEvent: {
-    country: {type: String},
-    date: {
-      day: {type: Number},
-      month: {type: Number},
-      year: {type: Number}
-    }
-  },
-  trackCount: {type: Number}
+  title: {type: String, required: true},
+  status: {type: String, required: true},
+  format: {type: String},
+  trackCount: {type: Number},
+  recording: [{type: mongoose.Schema.Types.ObjectId, ref: 'recording', unique: true}],
+  mbid: {type: String, unique: true},
 }, option);
 
 module.exports = mongoose.model('release', releaseSchema);

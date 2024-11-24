@@ -3,17 +3,17 @@ const path = require("path");
 const uuid = require("uuid");
 
 const uploadDir = process.env.UPLOAD_DIR;
-// const storage = multer.diskStorage({
-//   destination: (req, file, cb) => {
-//     cb(null, uploadDir);
-//   },
-//   filename: (req, file, cb) => {
-//     const uniqueSuffix = `${uuid.v4()}`;
-//     cb(null, `${uniqueSuffix}${path.extname(file.originalname)}`);
-//   }
-// });
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = `${uuid.v4()}`;
+    cb(null, `${uniqueSuffix}${path.extname(file.originalname)}`);
+  }
+});
 
-const storage = multer.memoryStorage();
+// const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
   const allowedMimeTypes = ['audio/mpeg', 'audio/wav', 'audio/flac', 'audio/x-flac'];
@@ -48,6 +48,6 @@ const handleUpload = (uploadFunction) => async (req, res, next) => {
 };
 
 const uploadSingle = handleUpload(uploadMiddleware.single('file'));
-const uploadMultiple = handleUpload(uploadMiddleware.array('files', 50));
+const uploadMultiple = handleUpload(uploadMiddleware.array('files', 20));
 
 module.exports = {uploadSingle, uploadMultiple};

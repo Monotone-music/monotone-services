@@ -1,4 +1,5 @@
 const {promises: fs} = require("fs");
+const crypto = require('crypto');
 const logger = require('../init/logging');
 
 const ensureTempDirectoryExists = async () => {
@@ -22,6 +23,20 @@ const ensureTempDirectoryExists = async () => {
   }
 };
 
+const calculateHash = (buffer) => {
+  return crypto.createHash('sha256').update(buffer).digest('hex');
+}
+
+const parseRange = (rangeHeader, fileSize) => {
+  const [start, end] = rangeHeader.replace(/bytes=/, '').split('-');
+  return {
+    start: parseInt(start, 10),
+    end: end ? parseInt(end, 10) : fileSize - 1
+  };
+};
+
 module.exports = {
-  ensureTempDirectoryExists
+  ensureTempDirectoryExists,
+  calculateHash,
+  parseRange
 }
