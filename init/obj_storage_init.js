@@ -2,7 +2,7 @@ const Minio = require('minio')
 
 const endpoint = process.env.MINIO_ENDPOINT
 const port = parseInt(process.env.MINIO_PORT)
-const useSSL = true
+const useSSL = false
 const accessKey = process.env.MINIO_ACCESS_KEY
 const secretKey = process.env.MINIO_SECRET_KEY
 

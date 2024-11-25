@@ -2,13 +2,16 @@ const mongoose = require('mongoose');
 const option = require('./option');
 
 const releaseGroupSchema = new mongoose.Schema({
-    title: {type: String, required: true},
-    artist: {type: mongoose.Schema.Types.ObjectId, ref: 'artist'},
-    country: {type: String},
-    release_date: {type: mongoose.Schema.Types.ObjectId, ref: 'date'},
-    medium: {type: mongoose.Schema.Types.ObjectId, ref: 'medium'},
-    track_count: {type: Number},
-    primary_type: {type: String},
+  title: {type: String, required: true},
+  releaseType: {type: String, required: true},
+  releaseEvent: {
+    date: {type: Date},
+    country: {type: String}
+  },
+  albumArtist: {type: String},
+  release: [{type: mongoose.Schema.Types.ObjectId, ref: 'release'}],
+  image: {type: mongoose.Schema.Types.ObjectId, ref: 'image'},
+  mbid: {type: String, unique: true},
 }, option);
 
-module.exports = mongoose.model('release-group', releaseGroupSchema);
+module.exports = mongoose.model('releaseGroup', releaseGroupSchema);
