@@ -1,6 +1,8 @@
 const {promises: fs} = require("fs");
 const crypto = require('crypto');
 const logger = require('../init/logging');
+const jwt = require('jsonwebtoken');
+const CustomError = require("./custom_error");
 
 const ensureTempDirectoryExists = async () => {
   const uploadDir = process.env.UPLOAD_DIR;
@@ -27,16 +29,16 @@ const calculateHash = (buffer) => {
   return crypto.createHash('sha256').update(buffer).digest('hex');
 }
 
-const parseRange = (rangeHeader, fileSize) => {
-  const [start, end] = rangeHeader.replace(/bytes=/, '').split('-');
+const sendResult = function sendResult(status, msg, data) {
   return {
-    start: parseInt(start, 10),
-    end: end ? parseInt(end, 10) : fileSize - 1
-  };
-};
+    status: status,
+    msg: msg,
+    data: data
+  }
+}
 
 module.exports = {
   ensureTempDirectoryExists,
   calculateHash,
-  parseRange
+  sendResult
 }

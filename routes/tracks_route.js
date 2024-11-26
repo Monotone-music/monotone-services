@@ -6,5 +6,6 @@ router.get('/stream', trackController.getTrackStream);
 router.put('/parse', uploadSingle, trackController.parseTrack);
 router.put('/parse-many', uploadMultiple, trackController.parseTrack);
 router.get('/stream/:recordingId', trackController.getTrackStream);
+router.get('/mobile/stream/:recordingId', trackController.getMobileTrackStream);
 
 module.exports = router;
