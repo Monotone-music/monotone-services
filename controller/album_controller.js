@@ -17,6 +17,17 @@ class AlbumController {
     const album = await this.releaseGroupService.getReleaseGroupByID(albumId);
     res.status(200).json({status: 'ok', message: 'Album retrieved', data: album});
   });
+
+  getTopAlbums = asyncHandler(async (req, res) => {
+    const limit = req.query.limit || 8;
+    const albums = await this.releaseGroupService.getTopAlbums(limit);
+    res.status(200).json({status: 'ok', message: 'Top albums retrieved', data: {releaseGroup: albums}});
+  });
+
+  getAlbumCount = asyncHandler(async (req, res) => {
+    const count = await this.releaseGroupService.getAlbumCount();
+    res.status(200).json({status: 'ok', message: 'Album count retrieved', data: {count}});
+  });
 }
 
 module.exports = new AlbumController();

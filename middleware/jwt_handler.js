@@ -10,7 +10,7 @@ const validateToken = asyncErrorHandler(async (req, res, next) => {
   const preFlightToken = req.header('Authorization');
   let token;
   if (!preFlightToken?.startsWith('Bearer ')) {
-    throw new CustomError('Access denied. No token provided', 401);
+    throw new CustomError(401, 'Access denied. No token provided');
   } else {
     token = preFlightToken.split(' ')[1];
   }

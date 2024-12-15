@@ -12,6 +12,12 @@ class AccountController {
     res.status(201).json({status: 'ok', message: 'Account created'});
   });
 
+  registerAccount = asyncHandler(async (req, res) => {
+    const type = req.query.type || 'listener';
+    await this.accountService.registerAccount(req.body, type);
+    res.status(201).json({status: 'ok', message: 'Account created'});
+  });
+
 }
 
 module.exports = new AccountController();

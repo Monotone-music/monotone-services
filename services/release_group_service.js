@@ -37,10 +37,33 @@ class ReleaseGroupService {
   async getAllReleaseGroups() {
     try {
       const releaseGroups = await ReleaseGroup.find().populate({
-        path: 'image',
+        path: 'image'
+      }).populate({
+        path: 'release',
+        populate: {
+          path: 'recording'
+        }
       });
 
-      return {releaseGroup: releaseGroups,};
+      const filteredReleaseGroups = releaseGroups.filter(releaseGroup => {
+        const keepReleaseGroup = !releaseGroup.release.some(release =>
+          release.recording.some(recording => {
+            const shouldFilter = recording.available === 'pending' || recording.available === 'rejected';
+            // console.log(`Checking recording: ${recording.title}, Available: ${recording.available}, Should Filter: ${shouldFilter}`);
+            return shouldFilter;
+          })
+        );
+
+        // console.log(`Release Group ${releaseGroup.title} - Keep: ${keepReleaseGroup}`);
+        return keepReleaseGroup;
+      });
+
+      const result = filteredReleaseGroups.map(releaseGroup => {
+        const {release, ...rest} = releaseGroup.toObject();
+        return rest;
+      });
+
+      return {releaseGroup: result};
     } catch (error) {
       console.error(`Error getting all ReleaseGroups: ${error.message}`);
       throw error;
@@ -56,16 +79,22 @@ class ReleaseGroupService {
         throw new CustomError(404, 'ReleaseGroup not found.');
       }
 
-      return await releaseGroup.populate({
-        path: 'release',
-        populate: {
-          path: 'recording',
+      return await releaseGroup.populate([
+        {
+          path: 'release',
           populate: {
-            path: 'image',
-            select: '-fingerprint'
-          }
-        }
-      });
+            path: 'recording',
+            populate: {
+              path: 'image',
+              select: '-fingerprint',
+            },
+          },
+        },
+        {
+          path: 'image',
+          select: '-fingerprint',
+        },
+      ]);
 
     } catch (error) {
       console.error(`Error getting ReleaseGroup by ID: ${error.message}`);
@@ -139,6 +168,78 @@ class ReleaseGroupService {
     } catch (error) {
       console.error(`Error appending to ReleaseGroup array: ${error.message}`);
       throw error;
+    }
+  }
+
+  async getTopAlbums(limit) {
+    const topAlbums = await this.#calculateTopAlbums(limit);
+    return topAlbums;
+  }
+
+  async #calculateTopAlbums(limit) {
+    const topAlbums = await ReleaseGroup.aggregate([
+      {$unwind: '$release'},
+      {
+        $lookup: {
+          from: 'releases',
+          localField: 'release',
+          foreignField: '_id',
+          as: 'releaseData',
+        },
+      },
+      {$unwind: '$releaseData'},
+      {
+        $lookup: {
+          from: 'recordings',
+          localField: 'releaseData.recording',
+          foreignField: '_id',
+          as: 'recordingData',
+        },
+      },
+      {$unwind: '$recordingData'},
+      {
+        $group: {
+          _id: '$_id',
+          releaseGroup: {$first: '$$ROOT'},
+          totalViews: {$sum: '$recordingData.view'},
+        },
+      },
+      {
+        $project: {
+          'releaseGroup.releaseData': 0,
+          'releaseGroup.recordingData': 0,
+          '__v': 0,
+        }
+      },
+      {$sort: {totalViews: -1}},
+      {$limit: parseInt(limit)},
+    ])
+
+    let topReleaseGroup = [];
+
+    for (const album of topAlbums) {
+      topReleaseGroup.push(album.releaseGroup);
+    }
+
+    const populatedTopAlbums = await Promise.all(
+      topReleaseGroup.map(async (album) => {
+        const populatedAlbum = await ReleaseGroup.populate(album, {
+          path: 'image',
+        })
+        return populatedAlbum;
+      })
+    );
+
+    return populatedTopAlbums;
+  }
+
+  async getAlbumCount() {
+    try {
+      const albumCount = await ReleaseGroup.countDocuments();
+      return albumCount;
+    } catch (error) {
+      console.error(`Error getting album count: ${error.message}`);
+      throw new CustomError(500, 'Error getting album count.');
     }
   }
 }

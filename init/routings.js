@@ -13,6 +13,10 @@ function registerRoutes(app) {
     router.use('/search', require('../routes/search_route'));
     router.use('/account', require('../routes/account_route'));
     router.use('/auth', require('../routes/auth_route'));
+    router.use('/payment', require('../routes/payment_route'));
+    router.use('/listener', require('../routes/listener_route'));
+    router.use('/playlist', require('../routes/playlist_route'));
+    router.use('/analytics', require('../routes/analytics_route'));
 
     app.use('', router);
     logger.info('Routes registered');

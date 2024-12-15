@@ -48,7 +48,7 @@ class ArtistService {
 
   async getAllArtists() {
     try {
-      const artistRecords = await Artist.find();
+      const artistRecords = await Artist.find().populate('image');
       const populatedArtistRecords = await Promise.all(
         artistRecords.map(async (artistRecord) => {
           return artistRecord;
@@ -61,27 +61,24 @@ class ArtistService {
     }
   }
 
-  async getArtistByName(artistName) {
-    try {
-      const artistRecord = await Artist.findOne({name: artistName});
-      return artistRecord;
-    } catch (error) {
-      console.error(`Error getting artist by name: ${error.message}`);
-      throw new Error('Failed to get artist by name.');
-    }
-  }
-
   async getArtistById(artistId) {
     try {
       const artist = await Artist.findOne({_id: artistId})
-        .populate({
-          path: 'releaseGroup featuredIn'
-        });
-
-      if (!artist) {
-        console.error(`Artist with ID ${artistId} not found.`);
-        throw new CustomError(`Artist with ID ${artistId} not found.`);
-      }
+        .populate([
+          {
+            path: 'releaseGroup',
+            populate: {
+              path: 'image',
+            },
+          },
+          {
+            path: 'featuredIn',
+            populate: {
+              path: 'image',
+            },
+          },
+          {path: 'image'},
+        ]);
 
       return {artist: artist};
     } catch (error) {
@@ -112,6 +109,25 @@ class ArtistService {
     } catch (error) {
       console.error(`Error appending to artist array: ${error.message}`);
       throw new Error('Failed to append to artist array.');
+    }
+  }
+
+  async updateArtistImage(artistId, imageId) {
+    try {
+      if (!artistId || !imageId) {
+        throw new Error('Both artistId and imageId are required.');
+      }
+
+      const updatedArtist = await Artist.findByIdAndUpdate(artistId, {image: imageId}, {new: true});
+
+      if (!updatedArtist) {
+        throw new Error(`Artist with ID ${artistId} not found.`);
+      }
+
+      return updatedArtist;
+    } catch (error) {
+      console.error(`Error updating artist image: ${error.message}`);
+      throw new CustomError('Failed to update artist image.');
     }
   }
 }

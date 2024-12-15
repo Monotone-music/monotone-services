@@ -19,12 +19,7 @@ const account = new mongoose.Schema({
   status: {
     type: String, enum: ['active', 'inactive', 'suspended'], default: 'active', required: false,
   },
-  createdAt: {
-    type: Date, default: Date.now, required: false,
-  },
-  updatedAt: {
-    type: Date, required: false,
-  },
+  accessLevel: {type: mongoose.Types.ObjectId, ref: 'accessLevel', required: false},
 }, option);
 
 account.pre('save', async function (next) {

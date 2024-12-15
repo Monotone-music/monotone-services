@@ -16,8 +16,10 @@ const recordingSchema = new mongoose.Schema({
   }],
   media: {type: mongoose.Schema.Types.ObjectId, ref: 'media'},
   image: {type: mongoose.Schema.Types.ObjectId, ref: 'image'},
-  mbid: {type: String, unique: true},
-  acoustid: {type: String, unique: true},
+  view: {type: Number, default: 0},
+  available: {type: String, default: 'available'},
+  mbid: {type: String},
+  acoustid: {type: String},
 }, option);
 
 module.exports = mongoose.model('recording', recordingSchema);

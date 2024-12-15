@@ -3,6 +3,7 @@ const Media = require('../model/media');
 const MinioService = require('./minio_service');
 
 const {generateFingerprint, transcodePath, transcodeStream} = require('../utils/audio_utils');
+const {calculateHash} = require('../utils/utils');
 
 const ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs');
@@ -22,6 +23,7 @@ class MediaService {
       size: media_data.size,
       mimetype: media_data.mimetype,
       fingerprint: media_data.fingerprint || null,
+      hash: calculateHash(fs.readFileSync(media_data.path)),
     }
 
     const objFilename = path.basename(data.filename, path.extname(data.filename));
@@ -55,12 +57,26 @@ class MediaService {
   }
 
   async getMediaStreamByFilename(mediaFilename, bitrate) {
-    const bucketPath = bitrate ? `${bitrate}kbps` : 'lossless';
+    const normalizedBitrate =
+      bitrate === 'lossless'
+        ? 'lossless'
+        : typeof bitrate === 'string' && bitrate.endsWith('kbps')
+          ? bitrate.slice(0, -4)
+          : bitrate;
 
-    const media = await this.minioService.getObject(mediaFilename, 'monotone', bucketPath);
+    const bucketPath = normalizedBitrate === 'lossless'
+      ? 'lossless'
+      : `${normalizedBitrate}kbps`;
 
-    return media;
+    try {
+      const media = await this.minioService.getObject(mediaFilename, 'monotone', bucketPath);
+      return media;
+    } catch (e) {
+      console.error(`Error getting media stream: ${e.message}`);
+      throw new CustomError(404, e.message);
+    }
   }
+
 
   async #processAndUploadMedia(mediaFilePath, filename, mimetype) {
     const bitRates = ['192', '320'];
@@ -103,6 +119,33 @@ class MediaService {
       });
     } catch (error) {
       console.error(`Error processing media: ${error.message}`);
+      throw error;
+    }
+  }
+
+  async checkMediaExists(mediaFilePath) {
+    try {
+      const fileBuffer = fs.readFileSync(mediaFilePath);
+      const hash = calculateHash(fileBuffer);
+
+      // Check for media with matching hash
+      const existingMedia = await Media.findOne({hash: hash});
+
+      if (existingMedia) {
+        // Media already exists, delete the file
+        fs.unlink(mediaFilePath, (err) => {
+          if (err) {
+            console.error(`Error deleting file ${mediaFilePath}: ${err.message}`);
+          } else {
+            console.log(`Successfully deleted file: ${mediaFilePath}`);
+          }
+        });
+        throw new CustomError(409, 'Media already exists');
+      }
+
+      return existingMedia;
+    } catch (error) {
+      console.error(`Error in checkMediaExists: ${error.message}`);
       throw error;
     }
   }

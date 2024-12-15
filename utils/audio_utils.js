@@ -1,6 +1,8 @@
 const logger = require('../init/logging');
 const {spawn, exec} = require("child_process");
 const path = require("path");
+const ffmpeg = require('fluent-ffmpeg');
+const CustomError = require("./custom_error");
 
 function handleFFmpegOutput(ffmpegProcess, bitRate) {
   const chunks = [];
@@ -22,7 +24,8 @@ function handleFFmpegOutput(ffmpegProcess, bitRate) {
 
     ffmpegProcess.on('close', (code) => {
       if (code !== 0) {
-        reject(new Error(`FFmpeg process exited with code ${code}`));
+        console.log('FFmpeg process exited with reason:' + code);
+        reject(new CustomError(400, `FFmpeg process exited with code ${code}`));
       } else {
         resolve(Buffer.concat(chunks));
       }
@@ -42,8 +45,6 @@ function transcodePath(audioPath, bitRate = '192') {
   const ffmpegProcess = spawn('ffmpeg', [
     '-i', audioPath,
     '-f', 'mp3',
-    '-ar', '44100',
-    '-ac', 2,
     '-b:a', `${bitRate}k`,
     'pipe:1'
   ]);
@@ -61,8 +62,6 @@ function transcodeStream(audioBuffer, bitRate = '192') {
   const ffmpegProcess = spawn('ffmpeg', [
     '-i', 'pipe:0',
     '-f', 'mp3',
-    '-ar', '44100',
-    '-ac', 2,
     '-b:a', `${bitRate}k`,
     'pipe:1'
   ]);

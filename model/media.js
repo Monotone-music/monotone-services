@@ -11,7 +11,7 @@ const mediaSchema = new mongoose.Schema({
     duration: {type: Number},
     fingerprint: {type: String}
   },
-  url: {type: String},
+  hash: {type: String},
 }, option);
 
 module.exports = mongoose.model('media', mediaSchema);

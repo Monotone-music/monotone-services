@@ -1,36 +1,30 @@
-const MinioService = require('./minio_service');
-const MusicbrainzService = require('./musicbrainz_service');
-const AcoustIDService = require('./acoustid_service');
 const ArtistService = require('./artist_service');
 const RecordingService = require('./recording_service');
 const ReleaseGroupService = require('./release_group_service');
 const ReleaseService = require('./release_service');
 const ElasticService = require('./elastic_service');
+const LabelService = require('./label_service');
+const TokenService = require('./token_service');
+const MediaService = require('./media_service');
 
-const mongoose = require('mongoose');
+const {calculateHash} = require('../utils/utils');
 
-const path = require('path');
-const fs = require("fs");
-const {exec} = require("child_process");
-const {transcodePath, filterReleasesByType, filterDuplicateReleases} = require("../utils/audio_utils");
-const CustomError = require("../utils/custom_error");
 const mm = require('music-metadata');
-const util = require('util');
-const logger = require('../init/logging');
+const CustomError = require("../utils/custom_error");
 
 class TracksService {
   constructor() {
-    this.minioService = new MinioService();
-    this.musicbrainzService = new MusicbrainzService();
-    this.acoustidService = new AcoustIDService();
     this.recordingService = new RecordingService();
     this.artistService = new ArtistService();
     this.releaseGroupService = new ReleaseGroupService();
     this.releaseService = new ReleaseService();
     this.elasticService = new ElasticService();
+    this.labelService = new LabelService();
+    this.tokenService = new TokenService();
+    this.mediaService = new MediaService();
   }
 
-  async parseTrackMetadata(files) {
+  async parseTrackMetadata(files, accountId) {
     try {
       const fileArray = Array.isArray(files) ? files : [files];
 
@@ -77,8 +71,9 @@ class TracksService {
               acoustid: common.acoustid_id
             },
             image: {data: common.picture ? common.picture[0] : null}
-
           };
+
+          await this.mediaService.checkMediaExists(metadata.recording.media.path);
 
           // handle saving the artists
           const artistIds = await this.artistService.upsertMultipleArtists(metadata.artist);
@@ -127,8 +122,18 @@ class TracksService {
           metadata.recording.release_mbid = release.mbid;
 
           const recording = await this.recordingService.insertRecording(metadata.recording);
-          await this.releaseGroupService.updateReleaseGroupImage(releaseGroup._id, recording.image);
+          const releaseGroupWithImage = await this.releaseGroupService.updateReleaseGroupImage(releaseGroup._id, recording.image);
           await this.releaseService.appendRecordingToRelease(release.mbid, recording._id);
+
+          for (const artist of updatedArtists) {
+            try {
+              await this.artistService.updateArtistImage(artist._id, recording.image);
+            } catch (imageUpdateError) {
+              console.error(`Error updating image for artist ${artist.name}: ${imageUpdateError.message}`);
+            }
+          }
+
+          await this.labelService.appendReleaseGroupToLabel(accountId, releaseGroupWithImage);
 
           if (!processedIds.has(`${releaseGroup.releaseType}:${releaseGroup._id}`)) {
             await this.elasticService.addDocument(
@@ -163,18 +168,35 @@ class TracksService {
 
         } catch (fileError) {
           console.error(`Error processing file ${file.path}:`, fileError.message);
+          throw new CustomError(400, 'Error processing file');
         }
       }
       return true;
     } catch (error) {
       console.error('Overall metadata parsing error:', error.message);
-      return [];
+      throw new CustomError(400, 'Error processing files');
     }
   }
 
   async getTrackStream(recordingId, bitrate) {
+    // const listenerId = listener?._id;
     const recording = await this.recordingService.getRecordingStream(recordingId, bitrate);
     return recording;
+  }
+
+  async getTopTracks(limit) {
+    const topTracks = await this.recordingService.getTopTracks(limit);
+    return topTracks;
+  }
+
+  async getTracksCount() {
+    const count = await this.recordingService.getRecordingCount();
+    return count;
+  }
+
+  async getTracksGeneralInfo(recordingId) {
+    const trackInfo = await this.recordingService.getRecordingById(recordingId);
+    return trackInfo;
   }
 }
 
