@@ -9,7 +9,8 @@ const schemaOptions = {
         transform: function (doc, ret) {
             delete ret.__v;
         }
-    }
+    },
+    timestamps: true
 };
 
 module.exports = schemaOptions;

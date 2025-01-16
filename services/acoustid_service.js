@@ -2,7 +2,6 @@ const https = require("https");
 const zlib = require("zlib");
 const {exec} = require("node:child_process");
 const path = require("node:path");
-const {normalizePath} = require("../utils/utils");
 const data = require("./sample_data");
 
 class AcoustidService {
@@ -21,7 +20,7 @@ class AcoustidService {
 
         const client = this.acoustIDAPIKey;
         const roundedDuration = Math.round(duration);
-        const meta = 'recordings';
+        const meta = 'recordings+releasegroups+releases+tracks+compress';
         const url = `${this.baseUrl}lookup?client=${client}&duration=${roundedDuration}&fingerprint=${fingerprint}&meta=${meta}`;
 
         const options = {
@@ -54,7 +53,9 @@ class AcoustidService {
  */
 function generateFingerprint(filename) {
     return new Promise((resolve, reject) => {
-        exec(`fpcalc -json ${path.join(__dirname, normalizePath(`../temp/${filename}`))}`, (error, stdout) => {
+        const fullPath = `"${path.join(__dirname, `../temp/${filename}`)}"`
+
+        exec(`fpcalc -json ${path.normalize(fullPath)}`, (error, stdout) => {
             if (error) {
                 return reject('Error generating fingerprint: ' + error);
             }
