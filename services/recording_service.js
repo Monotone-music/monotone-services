@@ -12,7 +12,7 @@ class RecordingService {
     this.viewLogService = new ViewLogService();
   }
 
-  async insertRecording(recording_data) {
+  async insertRecording(recording_data, flag = 'label') {
     const data = {
       title: recording_data.title,
       duration: recording_data.duration,
@@ -20,10 +20,18 @@ class RecordingService {
       artistsort: recording_data.artistsort,
       displayedArtist: recording_data.displayedArtist,
       artist: recording_data.artist,
-      // media: recording_data.media,
+      available: 'pending',
       mbid: recording_data.mbid,
       acoustid: recording_data.acoustid
     };
+
+    switch (flag) {
+      case 'label':
+        break;
+      case 'artist':
+        data.available = 'queued';
+        break;
+    }
 
     try {
       const recording = await Recording.findOneAndUpdate(
@@ -110,18 +118,40 @@ class RecordingService {
     }
   }
 
-  async getUnavailableRecordings() {
+  async getPendingRecordings() {
     try {
       const recordings = await Recording.find({available: "pending"})
         .populate({path: 'media image', select: '-fingerprint'});
       return recordings;
     } catch (e) {
-      console.error(`Error getting unavailable recordings: ${e.message}`);
-      throw new CustomError(500, 'Error getting unavailable recordings');
+      console.error(`Error getting pending recordings: ${e.message}`);
+      throw new CustomError(500, 'Error getting pending recordings');
     }
   }
 
-  async updateRecordingAvailability(recordingId) {
+  async approveQueuedRecording(recordingId) {
+    const currentRecording = await Recording.findById(recordingId);
+
+    if (!currentRecording) {
+      console.error(`Recording with ID ${recordingId} not found.`);
+      throw new CustomError(404, 'Recording not found.');
+    }
+
+    if (currentRecording.available !== 'queued') {
+      console.error(`Recording with ID ${recordingId} is not in 'queued' state.`);
+      throw new CustomError(400, 'Recording is not in "queued" state.');
+    }
+
+    const updatedRecording = await Recording.findByIdAndUpdate(
+      recordingId,
+      {available: 'pending'},
+      {new: true}
+    );
+
+    return updatedRecording;
+  }
+
+  async approveRecording(recordingId) {
     const currentRecording = await Recording.findById(recordingId);
 
     if (!currentRecording) {
@@ -140,7 +170,7 @@ class RecordingService {
     return updatedRecording;
   }
 
-  async rejectRecordingAvailability(recordingId) {
+  async rejectRecording(recordingId) {
     const currentRecording = await Recording.findById(recordingId);
 
     if (!currentRecording) {
@@ -148,7 +178,29 @@ class RecordingService {
       throw new CustomError(404, 'Recording not found.');
     }
 
-    const flippedAvailability = 'rejected' === currentRecording.available ? 'pending' : 'rejected';
+    if (currentRecording.available === 'pending' || currentRecording.available === 'queued') {
+      const updatedRecording = await Recording.findByIdAndUpdate(
+        recordingId,
+        {available: 'rejected'},
+        {new: true}
+      );
+
+      return updatedRecording;
+    } else {
+      console.error(`Recording with ID ${recordingId} cannot be rejected because its current status is not 'pending' or 'queued'.`);
+      throw new CustomError(400, 'Recording can only be rejected if it is pending or queued.');
+    }
+  }
+
+  async disableRecording(recordingId) {
+    const currentRecording = await Recording.findById(recordingId);
+
+    if (!currentRecording) {
+      console.error(`Recording with ID ${recordingId} not found.`);
+      throw new CustomError(404, 'Recording not found.');
+    }
+
+    const flippedAvailability = 'disabled' === currentRecording.available ? 'available' : 'disabled';
 
     const updatedRecording = await Recording.findByIdAndUpdate(
       recordingId,
@@ -161,9 +213,16 @@ class RecordingService {
 
   async countUnavailableRecordings() {
     try {
-      const count = await Recording.countDocuments({available: 'pending'});
+      const count = await Recording.countDocuments(
+        {
+          $or: [
+            {available: 'pending'},
+            {available: 'queued'}
+          ]
+        });
       return count;
-    } catch (e) {
+    } catch
+      (e) {
       console.error(`Error getting count of unavailable recordings: ${e.message}`);
       throw new CustomError(500, 'Error getting count of unavailable recordings');
     }
@@ -187,4 +246,5 @@ class RecordingService {
   }
 }
 
-module.exports = RecordingService;
+module
+  .exports = RecordingService;

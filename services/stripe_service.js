@@ -6,6 +6,11 @@ const ListenerService = require('./listener_service');
 const MembershipService = require('./membership_service');
 const TokenService = require('./token_service');
 const PaymentService = require('./payment_service');
+const AdvertiserService = require('./advertiser_service');
+const AdBundleService = require('./ad_bundle_service');
+const AccountService = require('./account_service');
+
+const {sendEmail} = require('./email_service');
 
 class StripeService {
   constructor() {
@@ -13,6 +18,9 @@ class StripeService {
     this.membershipService = new MembershipService();
     this.tokenService = new TokenService();
     this.paymentService = new PaymentService();
+    this.advertiserService = new AdvertiserService();
+    this.adBundleService = new AdBundleService();
+    this.accountService = new AccountService();
   }
 
   async createPaymentIntent(amount, currency, metadata = {}) {
@@ -25,27 +33,6 @@ class StripeService {
       return paymentIntent;
     } catch (error) {
       throw new CustomError(500, "Error creating Payment Intent: " + error.message);
-    }
-  }
-
-  async retrievePaymentIntent(paymentIntentId) {
-    try {
-      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-      return paymentIntent;
-    } catch (error) {
-      throw new CustomError(500, "Error retrieving Payment Intent: " + error.message);
-    }
-  }
-
-  async refundPayment(paymentIntentId, amount) {
-    try {
-      const refund = await stripe.refunds.create({
-        payment_intent: paymentIntentId,
-        amount,
-      });
-      return refund;
-    } catch (error) {
-      throw new CustomError(500, "Error refunding Payment: " + error.message);
     }
   }
 
@@ -91,7 +78,7 @@ class StripeService {
         case 'charge.updated':
           const updatedCharge = event.data.object;
 
-          await this.#handleChargeUpdated(updatedCharge);
+          await this.#handleMetadata(event);
 
           console.log('Charge was updated:', updatedCharge.id);
           break;
@@ -99,13 +86,6 @@ class StripeService {
           const createdPaymentIntent = event.data.object;
 
           console.log('PaymentIntent was created:', createdPaymentIntent.id);
-          break;
-        case 'payment_intent.succeeded':
-          const paymentIntent = event.data.object;
-
-          await this.#handlePaymentIntentSucceeded(paymentIntent);
-
-          console.log('PaymentIntent was successful:', paymentIntent.id);
           break;
         case 'payment_intent.payment_failed':
           const failedPaymentIntent = event.data.object;
@@ -120,7 +100,22 @@ class StripeService {
     }
   }
 
-  async #handlePaymentIntentSucceeded(paymentIntent) {
+  async #handleMetadata(stripeEvent) {
+    const metadata = stripeEvent.data.object.metadata;
+
+    switch (metadata.type) {
+      case 'membership':
+        await this.#handleChargeUpdateForListeners(stripeEvent.data.object);
+        break;
+      case 'quota':
+        await this.#handleChargeUpdateForAdvertisersQuota(stripeEvent.data.object);
+        break;
+      default:
+        throw new CustomError(400, 'Invalid metadata type');
+    }
+  }
+
+  async #handlePaymentIntentSucceededForListener(paymentIntent) {
     const token = paymentIntent.metadata.token;
     const accountId = await this.tokenService.getAccountIdFromToken(token);
     const listener = await this.listenerService.getListenerByAccountId(accountId);
@@ -129,11 +124,15 @@ class StripeService {
     await this.listenerService.updateListenerMembership(listener, membership._id);
   }
 
-  async #handleChargeUpdated(updatedCharge) {
+  async #handleChargeUpdateForListeners(updatedCharge) {
     const token = updatedCharge.metadata.token;
 
     const accountId = await this.tokenService.getAccountIdFromToken(token);
     const listener = await this.listenerService.getListenerByAccountId(accountId);
+
+    await this.#handlePaymentIntentSucceededForListener(updatedCharge);
+
+    const accountEmail = await this.accountService.getAccountEmailFromAccountId(accountId);
 
     const paymentData = {
       listener: listener._id,
@@ -143,7 +142,34 @@ class StripeService {
       status: updatedCharge.status,
     }
 
-    await this.paymentService.createPayment(paymentData);
+    await sendEmail(accountEmail, accountId, 'payment', paymentData);
+
+    await this.paymentService.createPayment(paymentData, 'listener');
+  }
+
+  async #handleChargeUpdateForAdvertisersQuota(updatedCharge) {
+    const token = updatedCharge.metadata.token;
+
+    const accountId = await this.tokenService.getAccountIdFromToken(token);
+    const advertiser = await this.advertiserService.getAdvertiserByAccountId(accountId);
+
+    const adBundle = await this.adBundleService.getAdBundleById(advertiser.adBundle._id);
+
+    await this.adBundleService.increaseQuota(adBundle._id, updatedCharge.amount / 5);
+
+    const accountEmail = await this.accountService.getAccountEmailFromAccountId(accountId);
+
+    const paymentData = {
+      advertiser: advertiser._id,
+      amount: updatedCharge.amount,
+      currency: updatedCharge.currency,
+      receiptUrl: updatedCharge.receipt_url,
+      status: updatedCharge.status,
+    }
+
+    await sendEmail(accountEmail, accountId, 'payment', paymentData);
+
+    await this.paymentService.createPayment(paymentData, 'advertiser');
   }
 }
 

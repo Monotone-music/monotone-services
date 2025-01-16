@@ -4,7 +4,6 @@ const TokenService = require('./token_service');
 const ListenerService = require('./listener_service');
 
 const CustomError = require("../utils/custom_error");
-const {listen} = require("express/lib/application");
 
 class AuthService {
   constructor() {
@@ -19,23 +18,48 @@ class AuthService {
       throw new CustomError(400, 'Invalid username or password');
     }
 
+    if (['inactive', 'suspended'].includes(account.status)) {
+      throw new CustomError(403, 'Account is inactive or suspended');
+    }
+
     let bitrate = '192kbps';
+
+    const accessLevel = account.accessLevel.accessLevel;
+
     switch (flag) {
       case 'listener':
+        if (accessLevel !== 4) {
+          throw new CustomError(403, 'Access denied. Insufficient permissions');
+        }
         const listener = await this.listenerService.getListenerByAccountId(account._id);
         if (!listener) {
           throw new CustomError(400, 'Invalid username or password');
         }
-
         bitrate = listener.membership.quality;
         break;
       case 'label':
+        if (accessLevel !== 1) {
+          throw new CustomError(403, 'Access denied. Insufficient permissions');
+        }
+        bitrate = null;
+        break;
+      case 'advertiser':
+        if (accessLevel !== 2) {
+          throw new CustomError(403, 'Access denied. Insufficient permissions');
+        }
         bitrate = null;
         break;
       case 'admin':
-        if (account.role !== 'admin') {
-          throw new CustomError(400, 'Invalid username or password');
+        if (accessLevel !== 0) {
+          throw new CustomError(403, 'Access denied. Insufficient permissions');
         }
+        bitrate = null;
+        break;
+      case 'artist':
+        if (accessLevel !== 3) {
+          throw new CustomError(403, 'Access denied. Insufficient permissions');
+        }
+        bitrate = null;
         break;
     }
 
@@ -50,8 +74,26 @@ class AuthService {
 
     let returnObj = {accessToken: accessToken, refreshToken: refreshToken};
 
-    if (flag === 'listener') {
-      returnObj.bitrate = bitrate;
+    switch (flag) {
+      case 'listener':
+        returnObj.bitrate = bitrate;
+        break;
+      case 'label':
+        bitrate = null;
+        returnObj.role = 'label';
+        break;
+      case 'advertiser':
+        bitrate = null;
+        returnObj.role = 'advertiser';
+        break;
+      case 'admin':
+        bitrate = null;
+        returnObj.role = 'admin';
+        break;
+      case 'artist':
+        bitrate = null;
+        returnObj.role = 'artist';
+        break;
     }
 
     return returnObj;
@@ -87,6 +129,15 @@ class AuthService {
       case 'label':
         bitrate = null;
         break;
+      case 'advertiser':
+        bitrate = null;
+        break;
+      case 'admin':
+        bitrate = null;
+        break;
+      case 'artist':
+        bitrate = null;
+        break;
       default:
         bitrate = null;
         break;
@@ -98,8 +149,26 @@ class AuthService {
 
     let returnObj = {accessToken: tokens.accessToken, refreshToken: tokens.refreshToken};
 
-    if (flag === 'listener') {
-      returnObj.bitrate = bitrate;
+    switch (flag) {
+      case 'listener':
+        returnObj.bitrate = bitrate;
+        break;
+      case 'label':
+        bitrate = null;
+        returnObj.role = 'label';
+        break;
+      case 'advertiser':
+        bitrate = null;
+        returnObj.role = 'advertiser';
+        break;
+      case 'admin':
+        bitrate = null;
+        returnObj.role = 'admin';
+        break;
+      case 'artist':
+        bitrate = null;
+        returnObj.role = 'artist';
+        break;
     }
 
     return returnObj;

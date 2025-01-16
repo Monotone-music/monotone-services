@@ -2,10 +2,11 @@ const multer = require("multer");
 const path = require("path");
 const uuid = require("uuid");
 
-const uploadDir = process.env.UPLOAD_DIR;
-const storage = multer.diskStorage({
+const documentUploadDir = process.env.DOCUMENT_UPLOAD_DIR;
+
+const documentStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, uploadDir);
+    cb(null, documentUploadDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = `${uuid.v4()}`;
@@ -13,21 +14,21 @@ const storage = multer.diskStorage({
   }
 });
 
-const fileFilter = (req, file, cb) => {
-  const allowedMimeTypes = ['audio/mpeg', 'audio/wav', 'audio/flac', 'audio/x-flac', 'image/jpeg', 'image/png'];
+const documentFileFilter = (req, file, cb) => {
+  const allowedMimeTypes = ['image/jpeg', 'image/png', 'application/pdf'];
   if (!allowedMimeTypes.includes(file.mimetype)) {
     return cb(new Error('File type not allowed'), false);
   }
   cb(null, true);
 };
 
-const uploadMiddleware = multer({
-  storage,
-  limits: {fileSize: 1024 * 1024 * 100},
-  fileFilter
+const documentUploadMiddleware = multer({
+  storage: documentStorage,
+  limits: {fileSize: 1024 * 1024 * 50}, // Limit to 50MB per file
+  fileFilter: documentFileFilter
 });
 
-const handleUpload = (uploadFunction) => async (req, res, next) => {
+const handleDocumentUpload = (uploadFunction) => async (req, res, next) => {
   try {
     uploadFunction(req, res, (err) => {
       if (err instanceof multer.MulterError) {
@@ -40,18 +41,12 @@ const handleUpload = (uploadFunction) => async (req, res, next) => {
       next();
     });
   } catch (error) {
-    console.error('Failed to ensure directories exist:', error);
+    console.error('Failed to process document upload:', error);
     res.status(500).send('Server error: Unable to process upload');
   }
 };
 
-const uploadSingle = handleUpload(uploadMiddleware.single('file'));
-const uploadMultiple = handleUpload(uploadMiddleware.array('files', 20));
-const uploadFields = handleUpload(
-  uploadMiddleware.fields([
-    {name: 'image', maxCount: 1},
-    {name: 'media', maxCount: 10},
-  ])
-);
+const uploadSingleDocument = handleDocumentUpload(documentUploadMiddleware.single('file'));
+const uploadMultipleDocuments = handleDocumentUpload(documentUploadMiddleware.array('files', 10)); // Maximum 10 files
 
-module.exports = {uploadSingle, uploadMultiple, uploadFields};
+module.exports = {uploadSingleDocument, uploadMultipleDocuments};

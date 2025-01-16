@@ -31,6 +31,10 @@ class ListenerService {
       throw new CustomError(404, 'Listener not found');
     }
 
+    if (listener.status === 'inactive') {
+      throw new CustomError(403, 'Listener account is inactive');
+    }
+
     return listener.populate([
       {path: 'membership'},
       {path: 'playlist', populate: {path: 'image'}}

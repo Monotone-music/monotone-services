@@ -6,13 +6,16 @@ const CustomError = require("./custom_error");
 
 const ensureTempDirectoryExists = async () => {
   const uploadDir = process.env.UPLOAD_DIR;
+  const documentUploadDir = process.env.DOCUMENT_UPLOAD_DIR;
   try {
     await fs.access(uploadDir);
+    await fs.access(documentUploadDir);
     logger.info('Directories already exist');
   } catch (error) {
     if (error.code === 'ENOENT') {
       try {
         await fs.mkdir(uploadDir, {recursive: true});
+        await fs.mkdir(documentUploadDir, {recursive: true});
         logger.info('Directories created successfully');
       } catch (createError) {
         logger.error('Error creating directories:', createError);

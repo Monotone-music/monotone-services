@@ -48,13 +48,11 @@ class ReleaseGroupService {
       const filteredReleaseGroups = releaseGroups.filter(releaseGroup => {
         const keepReleaseGroup = !releaseGroup.release.some(release =>
           release.recording.some(recording => {
-            const shouldFilter = recording.available === 'pending' || recording.available === 'rejected';
-            // console.log(`Checking recording: ${recording.title}, Available: ${recording.available}, Should Filter: ${shouldFilter}`);
+            const shouldFilter = ['pending', 'rejected', 'disabled'].includes(recording.available);
             return shouldFilter;
           })
         );
 
-        // console.log(`Release Group ${releaseGroup.title} - Keep: ${keepReleaseGroup}`);
         return keepReleaseGroup;
       });
 
@@ -197,6 +195,11 @@ class ReleaseGroupService {
         },
       },
       {$unwind: '$recordingData'},
+      {
+        $match: {
+          'recordingData.available': 'available'
+        }
+      },
       {
         $group: {
           _id: '$_id',

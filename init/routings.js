@@ -17,6 +17,11 @@ function registerRoutes(app) {
     router.use('/listener', require('../routes/listener_route'));
     router.use('/playlist', require('../routes/playlist_route'));
     router.use('/analytics', require('../routes/analytics_route'));
+    router.use('/advertisement', require('../routes/advertisement_route'));
+    router.use('/advertiser', require('../routes/advertiser_route'));
+    router.use('/access_level', require('../routes/access_level_route'));
+    router.use('/label', require('../routes/label_route'));
+    router.use('/verification', require('../routes/verification_route'));
 
     app.use('', router);
     logger.info('Routes registered');

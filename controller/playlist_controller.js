@@ -16,15 +16,27 @@ class PlaylistController {
     const name = req.body.name;
     const recordingId = req.body.recordingId;
 
+    const accountid = await this.#extractAccountIdFromAccessToken(req);
+
+    const listener = await this.listenerService.getListenerByAccountId(accountid);
+
+    switch (listener.membership.type) {
+      case 'free':
+        if (listener.playlist.length >= 3) {
+          throw new CustomError(400, 'Free users can only have 3 playlists');
+        }
+        break;
+      case 'basic':
+        break;
+      default:
+        throw new CustomError(400, 'Unknown membership type');
+    }
+
     let playlist = await this.playlistService.createPlaylist(name);
 
     if (recordingId) {
       playlist = await this.playlistService.addRecordingToPlaylist(playlist._id, recordingId);
     }
-
-    const accountid = await this.#extractAccountIdFromAccessToken(req);
-
-    const listener = await this.listenerService.getListenerByAccountId(accountid);
 
     await this.listenerService.insertPlaylist(listener._id, playlist._id);
 

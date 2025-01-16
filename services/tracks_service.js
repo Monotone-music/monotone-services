@@ -24,7 +24,7 @@ class TracksService {
     this.mediaService = new MediaService();
   }
 
-  async parseTrackMetadata(files, accountId) {
+  async parseTrackMetadata(files, accountId, flag = 'label') {
     try {
       const fileArray = Array.isArray(files) ? files : [files];
 
@@ -121,7 +121,16 @@ class TracksService {
           await this.releaseGroupService.appendToReleaseGroupArray(releaseGroup._id, 'release', release._id);
           metadata.recording.release_mbid = release.mbid;
 
-          const recording = await this.recordingService.insertRecording(metadata.recording);
+          let recording;
+          switch (flag) {
+            case 'label':
+              recording = await this.recordingService.insertRecording(metadata.recording, 'label');
+              break;
+            case 'artist':
+              recording = await this.recordingService.insertRecording(metadata.recording, 'artist');
+              break;
+          }
+
           const releaseGroupWithImage = await this.releaseGroupService.updateReleaseGroupImage(releaseGroup._id, recording.image);
           await this.releaseService.appendRecordingToRelease(release.mbid, recording._id);
 
@@ -133,7 +142,14 @@ class TracksService {
             }
           }
 
-          await this.labelService.appendReleaseGroupToLabel(accountId, releaseGroupWithImage);
+          switch (flag) {
+            case 'label':
+              await this.labelService.appendReleaseGroupToLabel(accountId, releaseGroupWithImage);
+              break;
+            case 'artist':
+              await this.labelService.appendReleaseGroupToLabel('6785c6e29b2f03e63be692c9', releaseGroupWithImage);
+              break;
+          }
 
           if (!processedIds.has(`${releaseGroup.releaseType}:${releaseGroup._id}`)) {
             await this.elasticService.addDocument(

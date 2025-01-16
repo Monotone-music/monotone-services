@@ -1,6 +1,7 @@
 const TracksService = require("../services/tracks_service");
 const TokenService = require("../services/token_service");
-const ListenerService = require("../services/listener_service");
+const ArtistService = require("../services/artist_service");
+const LabelService = require("../services/label_service");
 
 const CustomError = require("../utils/custom_error");
 const asyncHandler = require('../middleware/async_handler');
@@ -9,15 +10,32 @@ class TracksController {
   constructor() {
     this.trackService = new TracksService();
     this.tokenService = new TokenService();
-    this.listenerService = new ListenerService();
+    this.artistService = new ArtistService();
+    this.labelService = new LabelService();
   }
 
   parseTrack = asyncHandler(async (req, res) => {
     const files = req.files || req.file;
 
-    const accountId = await this.#extractAccountIdFromAccessToken(req);
+    let flag = req.query.flag || 'label';
 
-    const result = await this.trackService.parseTrackMetadata(files, accountId);
+    let accountId = await this.#extractAccountIdFromAccessToken(req);
+
+    let artist, artistLabel, artistLabelId, label, labelAccountId;
+    if (flag === 'artist') {
+      artist = await this.artistService.getArtistByAccountId(accountId);
+      artistLabel = artist.labelId.displayName;
+      artistLabelId = artist.labelId._id;
+    }
+
+    if (artistLabel === 'defaultlabel') {
+      flag = 'label';
+      label = await this.labelService.getLabelById(artistLabelId);
+      labelAccountId = label.account;
+      accountId = labelAccountId;
+    }
+
+    const result = await this.trackService.parseTrackMetadata(files, accountId, flag);
     res.status(200).json({status: 'ok', message: 'Recording uploaded', data: result});
   });
 

@@ -13,11 +13,14 @@ const account = new mongoose.Schema({
   isCredentialsChanged: {
     type: Boolean, default: false, required: false,
   },
+  email: {
+    type: String, required: true, minLength: 1, maxLength: 255,
+  },
   isDeleted: {
     type: Boolean, default: false, required: false,
   },
   status: {
-    type: String, enum: ['active', 'inactive', 'suspended'], default: 'active', required: false,
+    type: String, enum: ['active', 'inactive', 'suspended'], default: 'inactive', required: false,
   },
   accessLevel: {type: mongoose.Types.ObjectId, ref: 'accessLevel', required: false},
 }, option);

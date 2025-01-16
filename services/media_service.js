@@ -15,7 +15,7 @@ class MediaService {
     this.minioService = new MinioService();
   }
 
-  async insertMedia(media_data) {
+  async insertMedia(media_data, flag = 'music') {
     const data = {
       filename: media_data.filename || null,
       originalName: media_data.originalname,
@@ -30,19 +30,21 @@ class MediaService {
     data.filename = objFilename;
 
     try {
-      const fingerprint = await generateFingerprint(media_data.path);
-      data.fingerprint = fingerprint;
+      if (flag === 'music') {
+        const fingerprint = await generateFingerprint(media_data.path);
+        data.fingerprint = fingerprint;
 
-      const existingMedia = await Media.findOne({fingerprint});
-      if (existingMedia) {
-        fs.unlink(media_data.path, (err) => {
-          if (err) {
-            console.error(`Error deleting file ${media_data.path}: ${err.message}`);
-          } else {
-            console.log(`Successfully deleted file: ${media_data.path}`);
-          }
-        });
-        return existingMedia;
+        const existingMedia = await Media.findOne({fingerprint});
+        if (existingMedia) {
+          fs.unlink(media_data.path, (err) => {
+            if (err) {
+              console.error(`Error deleting file ${media_data.path}: ${err.message}`);
+            } else {
+              console.log(`Successfully deleted file: ${media_data.path}`);
+            }
+          });
+          return existingMedia;
+        }
       }
 
       const newMedia = await Media.create(data);
@@ -77,6 +79,40 @@ class MediaService {
     }
   }
 
+  async getAdvertisementStreamByFilename(mediaFilename) {
+    try {
+      return this.minioService.getObject(mediaFilename, 'monotone', 'advertisements');
+    } catch (e) {
+      console.error(`Error getting advertisement stream: ${e.message}`);
+      throw new CustomError(404, e.message);
+    }
+  }
+
+  async uploadAdvertisementMedia(media_data) {
+    const data = {
+      filename: media_data.filename || null,
+      originalName: media_data.originalName,
+      extension: path.extname(media_data.filename),
+      size: media_data.size,
+      mimetype: media_data.mimetype,
+      hash: calculateHash(media_data.buffer),
+      mediaFilePath: media_data.path,
+    }
+
+    const objFilename = path.basename(data.filename, path.extname(data.filename));
+    data.filename = objFilename;
+
+    const existingMedia = await Media.findOne({hash: data.hash});
+
+    if (existingMedia) {
+      return existingMedia;
+    }
+
+    const newMedia = await Media.create(data);
+    await this.#noProcessAndUploadMedia(data.mediaFilePath, objFilename, data.mimetype);
+
+    return newMedia;
+  }
 
   async #processAndUploadMedia(mediaFilePath, filename, mimetype) {
     const bitRates = ['192', '320'];
@@ -102,7 +138,7 @@ class MediaService {
         await this.minioService.uploadObject(
           Buffer.from(buffer),
           filename,
-          'audio/mpeg',
+          mimetype,
           'monotone',
           bucketPaths[bitRate]
         );
@@ -110,6 +146,26 @@ class MediaService {
 
       await Promise.all(transcodingPromises);
 
+      fs.unlink(mediaFilePath, (err) => {
+        if (err) {
+          console.error(`Error deleting file ${mediaFilePath}: ${err.message}`);
+        } else {
+          console.log(`Successfully deleted file: ${mediaFilePath}`);
+        }
+      });
+    } catch (error) {
+      console.error(`Error processing media: ${error.message}`);
+      throw error;
+    }
+  }
+
+  async #noProcessAndUploadMedia(mediaFilePath, filename, mimetype) {
+    const bucketPath = 'advertisements';
+
+    try {
+      const buffer = fs.readFileSync(mediaFilePath);
+
+      await this.minioService.uploadObject(buffer, filename, mimetype, 'monotone', bucketPath);
       fs.unlink(mediaFilePath, (err) => {
         if (err) {
           console.error(`Error deleting file ${mediaFilePath}: ${err.message}`);

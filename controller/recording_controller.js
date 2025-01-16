@@ -6,15 +6,22 @@ class RecordingController {
     this.recordingService = new RecordingService();
   }
 
-  getUnavailableRecordings = asyncHandler(async (req, res) => {
-    const recordings = await this.recordingService.getUnavailableRecordings();
-    res.status(200).json({status: 'ok', message: 'Unavailable recordings retrieved', data: recordings});
+  getPendingRecordings = asyncHandler(async (req, res) => {
+    const recordings = await this.recordingService.getPendingRecordings();
+    res.status(200).json({status: 'ok', message: 'Pending recordings retrieved', data: recordings});
   });
 
-  updateRecordingAvailability = asyncHandler(async (req, res) => {
+  approveRecording = asyncHandler(async (req, res) => {
     const recordingId = req.params.id;
 
-    const recording = await this.recordingService.updateRecordingAvailability(recordingId);
+    const recording = await this.recordingService.approveRecording(recordingId);
+    res.status(200).json({status: 'ok', message: 'Recording updated', data: recording});
+  });
+
+  approveQueuedRecording = asyncHandler(async (req, res) => {
+    const recordingId = req.params.id;
+
+    const recording = await this.recordingService.approveQueuedRecording(recordingId);
     res.status(200).json({status: 'ok', message: 'Recording updated', data: recording});
   });
 
@@ -23,10 +30,17 @@ class RecordingController {
     res.status(200).json({status: 'ok', message: 'Unavailable recordings count retrieved', data: {count}});
   });
 
-  rejectRecordingAvailability = asyncHandler(async (req, res) => {
+  rejectRecording = asyncHandler(async (req, res) => {
     const recordingId = req.params.id;
 
-    const recording = await this.recordingService.rejectRecordingAvailability(recordingId);
+    const recording = await this.recordingService.rejectRecording(recordingId);
+    res.status(200).json({status: 'ok', message: 'Recording updated', data: recording});
+  });
+
+  disableRecording = asyncHandler(async (req, res) => {
+    const recordingId = req.params.id;
+
+    const recording = await this.recordingService.disableRecording(recordingId);
     res.status(200).json({status: 'ok', message: 'Recording updated', data: recording});
   });
 }
